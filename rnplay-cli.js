@@ -1,4 +1,7 @@
 #!/usr/bin/env node --harmony
+'use strict';
+
+/* jshint esnext: true, node:true, unused: true */
 
 const EventEmitter = require('events').EventEmitter;
 EventEmitter.defaultMaxListeners = 0;
@@ -7,41 +10,24 @@ const cli = require('cli');
 const fs = require('fs');
 const path = require('path');
 const Promise = require('bluebird');
-const val = require('validator');
 const expandHomeDir = require('expand-home-dir');
-const HOMEDIR = expandHomeDir('~');
+const exec = require('child_process').exec;
 
+const HOMEDIR = expandHomeDir('~');
 const CONFIG_FILE = '.rnplay';
 const CONFIG_FILE_PATH = path.join(HOMEDIR, CONFIG_FILE);
 
-const withInputAsync = () => {
-  return new Promise((resolve, reject) => {
-    cli.withInput((line) =>{
-      resolve(line);
-    });
-  });
-};
-
 const writeFileAsync = Promise.promisify(fs.writeFile, fs);
+const readFileAsync = Promise.promisify(fs.readFile, fs);
+const execAsync = Promise.promisify(exec);
 
-/**
- * Reads a single line, compares it with `predicate`
- * and either outputs and error message and waits for more
- * input or resolves the promise with the valid value
- * @param  {function} predicate The predicate to use for input checking
- * @param  {string} errorMsg    The error message to show
- * @return {object}             A promise
- */
-const readLine = (predicate, errorMsg) => {
-  return withInputAsync().then((input) => {
-    if (!predicate(input)) {
-      cli.output(errorMsg);
-      return readLine(predicate, errorMsg);
-    }
+const inputUtils = require('./utils/input');
+const maybeUsePackageName =  inputUtils.maybeUsePackageName;
+const readTokenFromCLI =  inputUtils.readTokenFromCLI;
+const readRepoNameFromCLI =  inputUtils.readRepoNameFromCLI;
+const readEmailFromCLI =  inputUtils.readEmailFromCLI;
 
-    return input.trim();
-  });
-};
+const api = require('./utils/api');
 
 cli.parse({
   authenticate: ['a', 'Authenticate to rnplay.org with a token'],
@@ -63,31 +49,13 @@ const getFirstTrueOption = (options) => {
 };
 
 const readConfig = () => {
-  return JSON.parse(fs.readFileSync(CONFIG_FILE_PATH));
-};
-
-const readTokenFromCLI = () => {
-  cli.output('Enter your authentication token:');
-  return readLine(
-    (token) => val.isLength(token, 1),
-    'Please enter a valid authentication token'
-  );
-};
-
-const readRepoNameFromCLI = () => {
-  cli.output('Please enter a name for your git repository (min 5 characters):');
-  return readLine(
-    (input) => val.isLength(input, 5),
-    'Please use a minimum of 5 characters'
-  );
-};
-
-const readEmailFromCLI = () => {
-  cli.output('Please enter your e-mail address:');
-  return readLine(
-    (input) => val.isEmail(input),
-    'Please use a valid e-mail address'
-  );
+  return readFileAsync(CONFIG_FILE_PATH)
+  .then((contents) => {
+    return JSON.parse(contents);
+  })
+  .catch((e) => {
+    throw new Error('Missing or corrupt config file, please run `rnplay -a`');
+  });
 };
 
 
@@ -101,7 +69,7 @@ const createConfig = () => {
     return readEmailFromCLI()
     .then((email) => {
       return [token, email];
-    })
+    });
   })
   .spread((token, email) => {
     const config = JSON.stringify({
@@ -111,9 +79,10 @@ const createConfig = () => {
     return writeFileAsync(CONFIG_FILE_PATH, config);
   })
   .then(() => {
-    cli.output('Saved config to ~/.rnplay');
+    cli.ok('Saved config to ~/.rnplay');
   });
 };
+
 
 /**
  * Creates a git repo with a name provided by the user and then
@@ -121,38 +90,34 @@ const createConfig = () => {
  * @return {Object} A promise
  */
 const createGitRepo = () => {
-  var name;
-  try {
-    name = require(path.join(process.cwd(), 'package.json')).name;
-  } catch (e) {}
-
-  return Promise.resolve(name)
-  .then((name) => {
-    if (name) {
-      cli.output('We found the following project name: ' + name + ' - do you want to use it? y/n');
-      return readLine((input) => {
-        input = input.trim().toLowerCase();
-        return input === 'y' || input === 'n';
-      }, 'Please answer with "y" or "n"')
-      .then((answer) => {
-        return answer === 'y' ?
-          name :
-          void 0;
-      });
-    }
-  })
-  .then((name) => {
-    return name ?
-      name :
-      readRepoNameFromCLI();
-  })
-  .then((name) => {
-    cli.output('Setting up new git repo')
-    cli.output('Add git remote');
-  })
-  .finally(() => {
-    process.exit();
-  });
+  var config;
+  return readConfig()
+    .then((conf) => {
+      if (!conf.email || !conf.token) {
+        throw new Error ('Invalid config, please run `rnplay -a` first');
+      }
+      config = conf;
+    })
+    .then(maybeUsePackageName)
+    .then((name) => name ? name : readRepoNameFromCLI())
+    .then((name) => {
+      return api.postCreateRepo(name, config)
+      .then(() => name);
+    })
+    .then((name) => {
+      cli.info('Adding git remote');
+      var remoteName = 'rnplay';
+      var url = 'https://'+ config.token + ':@git.rnplay.org:jsierles/' + name + '.git';
+      var cmd = 'git remote add ' + remoteName + ' ' + url;
+      return execAsync(cmd)
+        .then(() => {
+          return [remoteName, url];
+        });
+    })
+    .spread((remoteName, url) => {
+      cli.ok('Added remote with name `' + remoteName + ' and url: `' + url +'`');
+      cli.ok('All done! use `git push rnplay` to push your application.');
+    });
 };
 
 const actionMap = {
@@ -168,5 +133,9 @@ cli.main((args, options) => {
     return;
   }
 
-  action(cli).finally(() => process.exit());
+  action(cli)
+  .catch((e) => {
+    cli.error('Ooops, there has been an error: \n' + e.message);
+    cli.info('If you are sure that you did nothing wrong, please file an issue at the rnplay-cli repo!');
+  }).finally((e) => process.exit());
 });
