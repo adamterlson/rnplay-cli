@@ -2,14 +2,19 @@
   "name": "rnplay-cli",
   "version": "0.1.0",
   "description": "React Native Playground nodejs command line client",
-  "author": "Joshua Sierles",
+  "author": "Johannes Lumpe",
   "license": "MIT",
+  "bin": {
+    "rnplay": "rnplay-cli.js"
+  },
   "bugs": {
     "url": "https://github.com/rnplay/rnplay-cli/issues"
   },
   "homepage": "https://github.com/rnplay/rnplay-ci",
   "dependencies": {
+    "bluebird": "^2.9.30",
     "cli": "0.8.0",
-    "expand-home-dir": "0.0.2"
+    "expand-home-dir": "0.0.2",
+    "validator": "^3.40.1"
   }
 }
