@@ -116,7 +116,7 @@ const createGitRepo = () => {
     })
     .spread((remoteName, url) => {
       cli.ok('Added remote with name `' + remoteName + ' and url: `' + url +'`');
-      cli.ok('All done! use `git push rnplay` to push your application.');
+      cli.ok('All done! use `git push rnplay master` to push your application.');
     });
 };
 
