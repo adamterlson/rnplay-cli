@@ -3,7 +3,7 @@
 /* jshint esnext: true, node:true, unused: true */
 
 const cli = require('cli');
-var request = require('superagent-bluebird-promise');
+const request = require('superagent-bluebird-promise');
 const APP_ENDPOINT = 'https://rnplay.org/apps.json';
 
 const postCreateRepo = (name, config) => {
