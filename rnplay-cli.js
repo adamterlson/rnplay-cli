@@ -83,7 +83,6 @@ const createConfig = () => {
   });
 };
 
-
 /**
  * Creates a git repo with a name provided by the user and then
  * adds a remove to the local git repo.
@@ -102,12 +101,12 @@ const createGitRepo = () => {
     .then((name) => name ? name : readRepoNameFromCLI())
     .then((name) => {
       return api.postCreateRepo(name, config)
-      .then(() => name);
+      .then((result) => result.body.url_token);
     })
-    .then((name) => {
+    .then((urlToken) => {
       cli.info('Adding git remote');
       var remoteName = 'rnplay';
-      var url = 'https://'+ config.token + ':@git.rnplay.org:jsierles/' + name + '.git';
+      var url = 'https://'+ config.token + ':@git.rnplay.org:jsierles/' + urlToken + '.git';
       var cmd = 'git remote add ' + remoteName + ' ' + url;
       return execAsync(cmd)
         .then(() => {

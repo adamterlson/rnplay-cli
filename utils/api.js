@@ -13,7 +13,7 @@ const postCreateRepo = (name, config) => {
     .set('Content-Type', 'application/json')
     .send(JSON.stringify({app: {name: name, uses_git: 1}}))
     .set('X-User-Email', config.email)
-    .set('X-User-Token', config.token)
+    .set('X-User-Token', config.token);
 };
 
 module.exports = {
