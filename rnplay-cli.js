@@ -11,7 +11,7 @@ const exec = require('child_process').exec;
 const opener = require('opener');
 
 const Promise = require('bluebird');
-const RN_PLAY_APP_URL = 'https://staging.rnplay.org/apps/';
+const RN_PLAY_APP_URL = 'https://rnplay.org/apps/';
 
 const execAsync = Promise.promisify(exec);
 
