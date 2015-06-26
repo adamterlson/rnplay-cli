@@ -7,20 +7,12 @@ const EventEmitter = require('events').EventEmitter;
 EventEmitter.defaultMaxListeners = 0;
 
 const cli = require('cli');
-const fs = require('fs');
-const path = require('path');
-const Promise = require('bluebird');
-const expandHomeDir = require('expand-home-dir');
 const exec = require('child_process').exec;
 const opener = require('opener');
 
-const HOMEDIR = expandHomeDir('~');
-const CONFIG_FILE = '.rnplay';
-const CONFIG_FILE_PATH = path.join(HOMEDIR, CONFIG_FILE);
-const RN_PLAY_APP_URL = 'https://rnplay.org/apps/';
+const Promise = require('bluebird');
+const RN_PLAY_APP_URL = 'https://staging.rnplay.org/apps/';
 
-const writeFileAsync = Promise.promisify(fs.writeFile, fs);
-const readFileAsync = Promise.promisify(fs.readFile, fs);
 const execAsync = Promise.promisify(exec);
 
 const inputUtils = require('./utils/input');
@@ -28,6 +20,12 @@ const maybeUsePackageName =  inputUtils.maybeUsePackageName;
 const readTokenFromCLI =  inputUtils.readTokenFromCLI;
 const readRepoNameFromCLI =  inputUtils.readRepoNameFromCLI;
 const readEmailFromCLI =  inputUtils.readEmailFromCLI;
+
+const configUtils = require('./utils/config');
+const readConfig =  configUtils.readConfig;
+const saveConfig =  configUtils.saveConfig;
+const saveLocalConfig =  configUtils.saveLocalConfig;
+const readLocalConfig =  configUtils.readLocalConfig;
 
 const api = require('./utils/api');
 
@@ -49,20 +47,6 @@ const getFirstTrueOption = (options) => {
       options[key] && key;
   }, null);
 };
-
-const readConfig = () => {
-  return readFileAsync(CONFIG_FILE_PATH)
-  .then((contents) => {
-    return JSON.parse(contents);
-  })
-  .catch((e) => {
-    throw new Error('Missing or corrupt config file, please run `rnplay -a`');
-  });
-};
-
-const saveConfig = (configData) => {
-  return writeFileAsync(CONFIG_FILE_PATH, JSON.stringify(configData) + '\n');
-}
 
 /**
  * Reads auth token and email from stdin and writes them to the config file
@@ -108,8 +92,9 @@ const createGitRepo = () => {
       .then((result) => result.body.url_token);
     })
     .then((urlToken) => {
-      config.urlToken = urlToken;
-      return saveConfig(config)
+      return saveLocalConfig({
+        urlToken: urlToken
+      })
       .then(() => urlToken);
     })
     .then((urlToken) => {
@@ -119,10 +104,10 @@ const createGitRepo = () => {
       var cmd = 'git remote add ' + remoteName + ' ' + url;
       return execAsync(cmd)
         .then(() => {
-          return [remoteName, url, urlToken];
+          return [remoteName, url];
         });
     })
-    .spread((remoteName, url, urlToken) => {
+    .spread((remoteName, url) => {
       cli.ok('Added remote with name `' + remoteName + ' and url: `' + url +'`');
       cli.ok('All done! Use `git push rnplay master` to push your application.');
       cli.ok('You can use  `rnplay-cli --open` to open this application on rnplay.org');
@@ -134,7 +119,7 @@ const createGitRepo = () => {
  * @return {object} A promise
  */
 const openAppInBrowser = () => {
-  return readConfig()
+  return readLocalConfig()
     .then((conf) => {
       const token = conf.urlToken;
       if (!token) {

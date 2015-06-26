@@ -4,7 +4,7 @@
 
 const cli = require('cli');
 const request = require('superagent-bluebird-promise');
-const APP_ENDPOINT = 'https://rnplay.org/apps.json';
+const APP_ENDPOINT = 'https://staging.rnplay.org/apps.json';
 
 const postCreateRepo = (name, config) => {
   cli.info('Setting up new git repo');
