@@ -1,7 +1,7 @@
 {
   "name": "rnplay-cli",
   "version": "0.3.0",
-  "description": "React Native Playground nodejs command line client",
+  "description": "React Native Playground (rnplay.org) nodejs command line client",
   "author": "Johannes Lumpe",
   "license": "MIT",
   "bin": {
