@@ -2,16 +2,17 @@
 'use strict';
 
 /* jshint esnext: true, node:true, unused: true */
-
 const EventEmitter = require('events').EventEmitter;
 EventEmitter.defaultMaxListeners = 0;
 
 const cli = require('cli');
 const exec = require('child_process').exec;
 const opener = require('opener');
-
 const Promise = require('bluebird');
-const RN_PLAY_APP_URL = 'https://rnplay.org/apps/';
+
+const RNPLAY_ENV = process.env.RNPLAY_ENV;
+const prefix = RNPLAY_ENV ? RNPLAY_ENV + '.' : '';
+const RNPLAY_APP_URL = 'https://' + prefix + 'rnplay.org/apps/';
 
 const execAsync = Promise.promisify(exec);
 
@@ -27,7 +28,7 @@ const saveConfig =  configUtils.saveConfig;
 const saveLocalConfig =  configUtils.saveLocalConfig;
 const readLocalConfig =  configUtils.readLocalConfig;
 
-const api = require('./utils/api');
+const api = require('./utils/api')(prefix);
 
 cli.parse({
   authenticate: ['a', 'Authenticate to rnplay.org with a token'],
@@ -126,7 +127,7 @@ const openAppInBrowser = () => {
         return cli.error('You have to create an application using `rnplay-cli --create` first');
       }
 
-      const url = RN_PLAY_APP_URL + token;
+      const url = RNPLAY_APP_URL + token;
       opener(url);
     });
 }
