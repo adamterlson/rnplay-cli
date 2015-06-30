@@ -4,8 +4,12 @@
   "description": "React Native Playground (rnplay.org) nodejs command line client",
   "author": "Johannes Lumpe",
   "license": "MIT",
+  "scripts": {
+    "build": "rm -rf ./lib && babel src/ -d lib/",
+    "pre-publish": "npm run build"
+  },
   "bin": {
-    "rnplay": "rnplay-cli.js"
+    "rnplay": "lib/index.js"
   },
   "bugs": {
     "url": "https://github.com/rnplay/rnplay-cli/issues"
