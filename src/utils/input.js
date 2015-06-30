@@ -2,12 +2,12 @@
 
 /* jshint esnext: true, node:true */
 
-const cli = require('cli');
-const Promise = require('bluebird');
-const val = require('validator');
-const path = require('path');
+import cli from 'cli';
+import Promise from 'bluebird';
+import val from 'validator';
+import path from 'path';
 
-const withInputAsync = () => {
+export const withInputAsync = () => {
   return new Promise((resolve, reject) => {
     cli.withInput((line) =>{
       resolve(line);
@@ -24,17 +24,18 @@ const withInputAsync = () => {
  * @return {object}             A promise
  */
 const readLine = (predicate, errorMsg) => {
-  return withInputAsync().then((input) => {
-    if (!predicate(input)) {
-      cli.output(errorMsg);
-      return readLine(predicate, errorMsg);
-    }
+  return withInputAsync()
+    .then((input) => {
+      if (!predicate(input)) {
+        cli.output(errorMsg);
+        return readLine(predicate, errorMsg);
+      }
 
-    return input.trim();
-  });
+      return input.trim();
+    });
 };
 
-const readTokenFromCLI = () => {
+export const readTokenFromCLI = () => {
   cli.output('Enter your authentication token:');
   return readLine(
     (token) => val.isLength(token, 1),
@@ -42,7 +43,7 @@ const readTokenFromCLI = () => {
   );
 };
 
-const readRepoNameFromCLI = () => {
+export const readRepoNameFromCLI = () => {
   cli.output('Please enter a name for your git repository (min 5 characters):');
   return readLine(
     (input) => val.isLength(input, 5),
@@ -50,7 +51,7 @@ const readRepoNameFromCLI = () => {
   );
 };
 
-const readEmailFromCLI = () => {
+export const readEmailFromCLI = () => {
   cli.output('Please enter your e-mail address:');
   return readLine(
     (input) => val.isEmail(input),
@@ -58,30 +59,18 @@ const readEmailFromCLI = () => {
   );
 };
 
-const maybeUsePackageName = () => {
-  var name;
+export const maybeUsePackageName = () => {
+  let name;
   try {
     name = require(path.join(process.cwd(), 'package.json')).name;
   } catch (e) {}
 
   if (name) {
-    cli.output('We found the following project name: ' + name + ' - do you want to use it? y/n');
+    cli.output(`We found the following project name: ${name} - do you want to use it? y/n`);
     return readLine((input) => {
       input = input.trim().toLowerCase();
       return input === 'y' || input === 'n';
     }, 'Please answer with "y" or "n"')
-    .then((answer) => {
-      return answer === 'y' ?
-        name :
-        void 0;
-    });
+    .then((answer) => answer === 'y' ? name : void 0);
   }
-}
-
-module.exports = {
-  maybeUsePackageName: maybeUsePackageName,
-  withInputAsync: withInputAsync,
-  readTokenFromCLI: readTokenFromCLI,
-  readRepoNameFromCLI: readRepoNameFromCLI,
-  readEmailFromCLI: readEmailFromCLI
 };
