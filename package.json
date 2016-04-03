@@ -18,7 +18,7 @@
   "dependencies": {
     "bluebird": "^2.9.30",
     "cli": "0.8.0",
-    "expand-home-dir": "0.0.2",
+    "expand-home-dir": "0.0.3",
     "opener": "^1.4.1",
     "superagent": "^1.2.0",
     "superagent-bluebird-promise": "^2.0.2",
